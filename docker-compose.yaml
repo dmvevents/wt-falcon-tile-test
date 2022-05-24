@@ -1,0 +1,28 @@
+version: '2.1'
+
+services:
+	detections-simulation-service:
+	  container_name: detections-simulation-container
+	  build:
+	    context: ids-peak-sim
+	    dockerfile: Dockerfile
+	  ports:
+	      - "502:502"
+	      - "3000:3000"
+	      - "1884:8080"
+	      - "1885:8000"
+#	  depends_on:
+#	    - plc-server
+#	    - detections-backend-service
+
+  web:
+    build:
+      context: br-camera-service
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    volumes:
+    - .:/usr/app/
+    - /usr/app/node_modules
+    environment:
+      - SERVER_PORT=8080
