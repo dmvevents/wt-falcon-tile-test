@@ -46,13 +46,15 @@ SOURCES += \
     src/main.cpp \
     src/base64.cpp \
     src/tensorflowlite.cpp \
-    src/model_utils.cpp
+    src/model_utils.cpp \
+    src/nms.cpp
 
 HEADERS += \
     src/base64.h \
     src/tensorflowlite.h \
     src/my_precompiled_header.h \
-    src/model_utils.h
+    src/model_utils.h \
+    src/nms.h
 
 
 PRECOMPILED_HEADER = src/my_precompiled_header.h
