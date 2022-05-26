@@ -211,6 +211,7 @@ void Tensorflowlite::runDet()
           const float xmax = std::min(1.0f, bboxes[4 * i + 3])*width;
           //q.push(Object{id, score, BBox<float>{ymin, xmin, ymax, xmax}});
           //if (q.size() > top_k) q.pop();
+          qDebug() << "ID: ", ids[i];
           outResults.objectList[objectNum].classId = id;
           //snprintf(outputParam->objectList[objectNum].label, sizeof(outputParam->objectList[objectNum].label), "%s", object.label.c_str());
           outResults.objectList[objectNum].score = score;
