@@ -33,21 +33,13 @@
 
 /*** Function ***/
 static cv::Scalar createCvColor(int32_t b, int32_t g, int32_t r) {
+
 #ifdef CV_COLOR_IS_RGB
     return cv::Scalar(r, g, b);
 #else
     return cv::Scalar(b, g, r);
 #endif
 }
-
-/* Declare Ml Models */
-Tensorflowlite* model_obj;
-Tensorflowlite* model_class;
-Tensorflowlite* model_class_crop;
-Tensorflowlite* model_class_child;
-
-//typedef std::pair<int, int> point;
-std::chrono::high_resolution_clock::duration duration;
 
 struct PredictionResult final
 {
@@ -153,13 +145,30 @@ struct PredictionResult final
     int tile;
 };
 
+/* Declare Ml Models */
+Tensorflowlite* model_obj;
+Tensorflowlite* model_class;
+Tensorflowlite* model_class_crop;
+Tensorflowlite* model_class_child;
+
 void initTF(){
 
     /* Create object detection model */
     const char* model_f_obj = "/home/anton/Git/pycoral/test_data/ssd_mobilenet_v2_coco_quant_no_nms_edgetpu.tflite";
     const char* model_l_obj = "/home/anton/Git/pycoral/test_data/coco_labels.txt";
-    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,.8);
+    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,.5);
 
+//    model_obj1 = new Tensorflowlite(1,model_f_obj, model_l_obj,.5);
+//    model_obj2 = new Tensorflowlite(2,model_f_obj, model_l_obj,.5);
+//    model_obj3 = new Tensorflowlite(3,model_f_obj, model_l_obj,.5);
+//    model_obj4 = new Tensorflowlite(4,model_f_obj, model_l_obj,.5);
+//    model_obj5 = new Tensorflowlite(5,model_f_obj, model_l_obj,.5);
+//    model_obj6 = new Tensorflowlite(6,model_f_obj, model_l_obj,.5);
+//    model_obj7 = new Tensorflowlite(7,model_f_obj, model_l_obj,.5);
+//    model_obj8 = new Tensorflowlite(8,model_f_obj, model_l_obj,.5);
+//    model_obj9 = new Tensorflowlite(9,model_f_obj, model_l_obj,.5);
+//    model_obj10 = new Tensorflowlite(10,model_f_obj, model_l_obj,.5);
+//    model_obj11 = new Tensorflowlite(11,model_f_obj, model_l_obj,.5);
 
     std::cout << "Tensorflow initialization: OK" << std::endl;
 }
@@ -170,806 +179,480 @@ void runObj(cv::Mat frame){
     model_obj->runDet();
 }
 
-
-//void predict_tile(cv::Mat frame, const float new_threshold)
-//{
-//    std::vector<std::pair<int, int>> dims{{250,250},{400,400}};
-
-//    float tile_rect_factor					= 1.20f;
-//    float tile_edge_factor					= 0.25f;
-//    bool only_combine_similar_predictions   = false;
-//    bool combine_tile_predictions           = false;
-//    const std::string filename              = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
-//    bool enable_debug                       = false;
-
-//    initTF();
-
-
-//    //dims.push_back();
-
-
-//    if (frame.empty())
-//    {
-//        /// @throw std::invalid_argument if the image is empty.
-//        throw std::invalid_argument("cannot predict with an empty OpenCV image");
-//    }
-
-//    const float horizontal_factor		= static_cast<float>(frame.cols) / static_cast<float>(dims.at(0).first);
-//    const float vertical_factor			= static_cast<float>(frame.rows) / static_cast<float>(dims.at(0).second);
-
-//    const float horizontal_tiles_count	= std::round(std::max(1.0f, horizontal_factor	));
-//    const float vertical_tiles_count	= std::round(std::max(1.0f, vertical_factor		));
-
-//    // Set tile width
-//    const float tile_width				= static_cast<float>(frame.cols) / horizontal_tiles_count;
-//    const float tile_height				= static_cast<float>(frame.rows) / vertical_tiles_count;
-
-//    // Create tile size
-//    const cv::Size new_tile_size		= cv::Size(std::round(tile_width), std::round(tile_height));
-
-//    // Init multi frame capture vars for tracking
-//    double fps;
-//    int frameNum = 0;
-
-//    // Start and end times
-//    time_t start, end;
-
-//    // Start time
-//    time(&start);
-
-//    // Start the timer
-//    std::chrono::high_resolution_clock::duration total_duration = std::chrono::milliseconds(0);
-
-//    // Set labels
-//    std::vector<std::string> labels_obj = model_obj->getLabels();
-
-//    if (horizontal_tiles_count == 1 and vertical_tiles_count == 1)
-//    {
-//        // image is smaller than (or equal to) the network, so use the original predict() call
-//        //return predict_internal(frame, new_threshold);
-
-//        // Set frames
-//        std::thread tObj(runObj, frame);
-
-//        // Inc PLC
-//        tObj.join();
-
-//        //TODO POINTER
-//        OUTPUT_OBJ result = model_obj->getObjResults();
-
-//    }
-
-//    // otherwise, if we get here then we have more than 1 tile
-
-//    // divide the original image into the right number of tiles and call predict() on each tile
-//    std::vector<PredictionResult> results;
-//    std::vector<size_t> indexes_of_predictions_near_edges;
-//    std::vector<cv::Mat> all_tile_mats;
-
-
-
-//    for (float y = 0.0f; y < vertical_tiles_count; y ++)
-//    {
-//        for (float x = 0.0f; x < horizontal_tiles_count; x ++)
-//        {
-
-//            // Get tile count
-//            const int tile_count = y * horizontal_tiles_count + x;
-
-//            const int x_offset = std::round(x * tile_width);
-//            const int y_offset = std::round(y * tile_height);
-
-//            cv::Rect r(cv::Point(x_offset, y_offset), new_tile_size);
-
-//            // make sure the rectangle does not extend beyond the edges of the image
-//            if (r.x + r.width >= frame.cols)
-//            {
-//                r.width = frame.cols - r.x - 1;
-//            }
-
-//            if (r.y + r.height >= frame.rows)
-//            {
-//                r.height = frame.rows - r.y - 1;
-//            }
-
-//            cv::Mat roi = frame(r);
-
-//            // Just object detection
-//            // Set frames
-//            std::thread tObj(runObj, frame);
-
-//            // Inc PLC
-//            tObj.join();
-
-//            //TODO POINTER
-//            OUTPUT_OBJ result = model_obj->getObjResults();
-
-
-//            total_duration += duration;
-
-//            // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
-////            for (auto & prediction : prediction_results)
-//            for (const auto& object : result.objectList)
-//            {
-//                PredictionResult prediction;
-
-
-//                float score = static_cast<float>(object.score);
-//                int x0 = static_cast<int32_t>(object.x);
-//                int y0 = static_cast<int32_t>(object.y);
-
-//                int width = static_cast<int32_t>(object.width);
-//                int height = static_cast<int32_t>(object.height);
-
-//                prediction.original_point.x = static_cast<int32_t>((x0+width)/frame.cols);
-//                prediction.original_point.y = static_cast<int32_t>((y0+height)/frame.rows);
-
-//                prediction.original_size.width =static_cast<int32_t>(object.width/frame.cols);;
-//                prediction.original_size.height = static_cast<int32_t>(object.height/frame.rows);;
-
-//                prediction.best_class = object.classId;
-//                prediction.best_probability = score;
-//                prediction.name = labels_obj[object.classId].c_str();
-//                prediction.tile = tile_count;
-
-//                prediction.rect.x = x0;
-//                prediction.rect.y =  y0;
-
-//                prediction.rect.width = width;
-//                prediction.rect.height = height;
-
-
-//                //track which predictions are near the edges, because we may need to re-examine them and join them after we finish with all the tiles
-
-//                if (combine_tile_predictions)
-//                {
-//                    const int minimum_horizontal_distance	= tile_edge_factor * prediction.rect.width;
-//                    const int minimum_vertical_distance		= tile_edge_factor * prediction.rect.height;
-//                    if (prediction.rect.x <= minimum_horizontal_distance					or
-//                        prediction.rect.y <= minimum_vertical_distance						or
-//                        roi.cols - prediction.rect.br().x <= minimum_horizontal_distance	or
-//                        roi.rows - prediction.rect.br().y <= minimum_vertical_distance		)
-//                    {
-//                        // this prediction is near one of the tile borders so we need to remember it
-//                        indexes_of_predictions_near_edges.push_back(results.size());
-//                    }
-//                }
-
-//                // every prediction needs to have x_offset and y_offset added to it
-//                prediction.rect.x += x_offset;
-//                prediction.rect.y += y_offset;
-//                prediction.tile = tile_count;
-
-//                if (enable_debug)
-//                {
-//                    // draw a black-on-white debug label on the top side of the annotation
-
-//                    const std::string label		= "TEST"; //std::to_string(results.size());
-//                    const auto font				= cv::HersheyFonts::FONT_HERSHEY_PLAIN;
-//                    const auto scale			= 0.75;
-//                    const auto thickness		= 1;
-//                    int baseline				= 0;
-//                    const cv::Size text_size	= cv::getTextSize(label, font, scale, thickness, &baseline);
-//                    const int text_half_width	= text_size.width			/ 2;
-//                    const int text_half_height	= text_size.height			/ 2;
-//                    const int pred_half_width	= prediction.rect.width		/ 2;
-//                    const int pred_half_height	= prediction.rect.height	/ 2;
-
-//                    // put the text exactly in the middle of the prediction
-//                    const cv::Rect label_rect(
-//                            prediction.rect.x + pred_half_width - text_half_width,
-//                            prediction.rect.y + pred_half_height - text_half_height,
-//                            text_size.width, text_size.height);
-//                    cv::rectangle(frame, label_rect, {255, 255, 255}, cv::FILLED, cv::LINE_AA);
-//                    cv::putText(frame, label, cv::Point(label_rect.x, label_rect.y + label_rect.height), font, scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
-//                }
-
-//                // the original point and size are based on only 1 tile, so they also need to be fixed
-
-//                prediction.original_point.x = (static_cast<float>(prediction.rect.x) + static_cast<float>(prediction.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
-//                prediction.original_point.y = (static_cast<float>(prediction.rect.y) + static_cast<float>(prediction.rect.height) / 2.0f) / static_cast<float>(frame.rows);
-
-//                prediction.original_size.width	= static_cast<float>(prediction.rect.width	) / static_cast<float>(frame.cols);
-//                prediction.original_size.height	= static_cast<float>(prediction.rect.height	) / static_cast<float>(frame.rows);
-
-//                results.push_back(prediction);
-//            }
-//        }
-//    }
-
-//    if (indexes_of_predictions_near_edges.empty() == false)
-//    {
-//        // we need to go through all the results from the various tiles and merged together the ones that are side-by-side
-
-//        for (const auto & lhs_idx : indexes_of_predictions_near_edges)
-//        {
-//            if (results[lhs_idx].rect.area() == 0 and results[lhs_idx].tile == -1)
-//            {
-//                // this items has already been consumed and is marked for deletion
-//                continue;
-//            }
-
-//            const cv::Rect & lhs_rect = results[lhs_idx].rect;
-
-//            // now compare this rect against all other rects that come *after* this
-//            for (const auto & rhs_idx : indexes_of_predictions_near_edges)
-//            {
-//                if (rhs_idx <= lhs_idx)
-//                {
-//                    // if the RHS object is on an earlier tile, then we've already compared it
-//                    continue;
-//                }
-
-//                if (results[lhs_idx].tile == results[rhs_idx].tile)
-//                {
-//                    // if two objects are on the exact same tile, don't bother trying to combine them
-//                    continue;
-//                }
-
-//                if (results[rhs_idx].rect.area() == 0 and results[rhs_idx].tile == -1)
-//                {
-//                    // this item has already been consumed and is marked for deletion
-//                    continue;
-//                }
-
-
-////                if (config.only_combine_similar_predictions)
-////                {
-////                    // check the probabilities to see if there is any similarity:
-////                    //
-////                    // 1) does the LHS contain the best class from the RHS?
-////                    // 2) does the RHS contain the best class from the LHS?
-////                    //
-////                    if (results[lhs_idx].all_probabilities.count(results[rhs_idx].best_class) == 0 and
-////                        results[rhs_idx].all_probabilities.count(results[lhs_idx].best_class) == 0)
-////                    {
-////                        // the two objects have completely different classes, so we cannot combine them together
-////                        continue;
-////                    }
-////                }
-
-//                const cv::Rect & rhs_rect		= results[rhs_idx].rect;
-//                const cv::Rect combined_rect	= lhs_rect | rhs_rect;
-
-//                // if this is a good match, then the area of the combined rect will be similar to the area of lhs+rhs
-//                const int lhs_area		= lhs_rect		.area();
-//                const int rhs_area		= rhs_rect		.area();
-//                const int lhs_plus_rhs	= (lhs_area + rhs_area) * tile_rect_factor;
-//                const int combined_area	= combined_rect	.area();
-
-//                if (combined_area <= lhs_plus_rhs)
-//                {
-//                    auto & lhs = results[lhs_idx];
-//                    auto & rhs = results[rhs_idx];
-
-//                    lhs.rect = combined_rect;
-
-//                    lhs.original_point.x = (static_cast<float>(lhs.rect.x) + static_cast<float>(lhs.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
-//                    lhs.original_point.y = (static_cast<float>(lhs.rect.y) + static_cast<float>(lhs.rect.height	) / 2.0f) / static_cast<float>(frame.rows);
-
-//                    lhs.original_size.width		= static_cast<float>(lhs.rect.width	) / static_cast<float>(frame.cols);
-//                    lhs.original_size.height	= static_cast<float>(lhs.rect.height) / static_cast<float>(frame.rows);
-
-//                    // rebuild "all_probabilities" by combining both objects and keeping the max percentage
-//                    for (auto iter : rhs.all_probabilities)
-//                    {
-//                        const auto & key		= iter.first;
-//                        const auto & rhs_val	= iter.second;
-//                        const auto & lhs_val	= lhs.all_probabilities[key];
-
-//                        lhs.all_probabilities[key] = std::max(lhs_val, rhs_val);
-//                    }
-
-//                    // come up with a decent + consistent name to use for this object
-
-//                    //name_prediction(lhs);
-
-//                    // mark the RHS to be deleted once we're done looping through all the results
-//                    rhs.rect = {0, 0, 0, 0};
-//                    rhs.tile = -1;
-//                }
-//            }
-//        }
-
-//        // now go through the results and delete any with an empty rect and tile of -1
-//        auto iter = results.begin();
-//        while (iter != results.end())
-//        {
-//            if (iter->rect.area() == 0 and iter->tile == -1)
-//            {
-//                // delete this prediction from the results since it has been combined with something else
-//                iter = results.erase(iter);
-//            }
-//            else
-//            {
-//                iter ++;
-//            }
-//        }
-//    }
-
-//    if (enable_debug)
-//    {
-//        // draw vertical lines to show the tiles
-//        for (float x=1.0; x < horizontal_tiles_count; x++)
-//        {
-//            const int x_pos = std::round(frame.cols / horizontal_tiles_count * x);
-//            cv::line(frame, cv::Point(x_pos, 0), cv::Point(x_pos, frame.rows), {255, 0, 0});
-//        }
-
-//        // draw horizontal lines to show the tiles
-//        for (float y=1.0; y < vertical_tiles_count; y++)
-//        {
-//            const int y_pos = std::round(frame.rows / vertical_tiles_count * y);
-//            cv::line(frame, cv::Point(0, y_pos), cv::Point(frame.cols, y_pos), {255, 0, 0});
-//        }
-//    }
-
-////    original_image			= frame;
-////    binary_inverted_image	= cv::Mat();
-////    prediction_results		= results;
-////    duration				= total_duration;
-////    horizontal_tiles		= horizontal_tiles_count;
-////    vertical_tiles			= vertical_tiles_count;
-////    tile_size				= new_tile_size;
-
-////    return results;
-
-//}
+static void readLabel(const std::string filename, std::vector<std::string> &labels)
+{
+    std::ifstream ifs(filename);
+    if (ifs.fail()) {
+        printf("failed to read %s\n", filename);
+        return;
+    }
+    std::string str;
+    while(getline(ifs, str)) {
+        labels.push_back(str);
+    }
+    std::cout << "There are" << labels.size() << "labels" << std::endl;
+}
+
+std::string encodeBase64(cv::Mat frame){
+    std::vector<uchar> buf;
+    cv::imencode(".jpg", frame, buf);
+
+    auto *enc_msg = reinterpret_cast<unsigned char*>(buf.data());
+    std::string encoded =  base64_encode(enc_msg, buf.size());
+
+    return encoded;
+}
+
+
+QJsonDocument loadJson(QString fileName) {
+    QFile jsonFile(fileName);
+    jsonFile.open(QFile::ReadOnly);
+    return QJsonDocument().fromJson(jsonFile.readAll());
+}
+
+QJsonObject getJson(int w, int h, int xmin, int ymin, int xmax, int ymax, QString detectClass, QString time,
+                                    QString cropName, QString cropClassChild, QString camera){
+
+    QString path = QDir::currentPath();
+
+    QJsonObject json_obj;
+
+    json_obj["detectedAt"] = time;
+    json_obj["cropLabel"] =  cropClassChild;
+    json_obj["picLabel"]=  detectClass;
+    json_obj["width"]=  QString::number(w);
+    json_obj["height"]=  QString::number(h);
+    json_obj["xMin"]= QString::number(xmin);
+    json_obj["yMin"]= QString::number(ymin);
+    json_obj["xMax"]= QString::number(xmax);
+    json_obj["yMax"]= QString::number(ymax);
+    json_obj["camera"] = camera;
+    json_obj["depth"] =  3;
+
+    return json_obj;
+}
+
+QJsonObject data;
 
 int main(int argc, char *argv[])
 {
-
-
-//    initTF();
-
-//    std::vector<std::pair<int, int>> dims{{250,250},{400,400}};
-
-//    //dims.push_back();
-
-//    const std::string filename = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
-//    //cv::VideoCapture cap(filename);
-
-
-
-//    // Check if camera opened successfully
-
-//    /*
-//    if(!cap.isOpened()){
-//        std::cout << "Error opening video stream or file" <<  std::endl;
-//        return -1;
-//    }
-//    */
-
-//    double fps;
-//    int frameNum = 0;
-//    // Start and end times
-//    time_t start, end;
-
-//    // Start time
-//    time(&start);
-
-//    // Set labels
-//    std::vector<std::string> labels_obj = model_obj->getLabels();
-
-//    while(1){
-
-//        cv::Mat frame;
-
-//        frame = cv::imread(filename);
-
-//        // Capture frame-by-frame
-//        //cap >> frame;
-
-//        // If the frame is empty, break immediately
-//        if (frame.empty()){
-//            break;
-//        }
-
-//        for (auto dim: dims) {
-
-
-//        }
-//        // Set frames
-//        std::thread tObj(runObj, frame);
-
-//        // Inc PLC
-//        tObj.join();
-
-//        //TODO POINTER
-//        OUTPUT_OBJ result = model_obj->getObjResults();
-
-
-
-
-//        for (const auto& object : result.objectList) {
-//            cv::rectangle(frame, cv::Rect(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y), static_cast<int32_t>(object.width), static_cast<int32_t>(object.height)), cv::Scalar(255, 255, 0), 3);
-//            cv::putText(frame, labels_obj[object.classId].c_str(), cv::Point(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y) + 10), cv::FONT_HERSHEY_PLAIN, 1, createCvColor(0, 0, 0), 3);
-
-//            if (object.hasCrop == true){
-
-//                int xmin = static_cast<int32_t>(object.x);
-//                int ymin = static_cast<int32_t>(object.y);
-//                int xmax = xmin + static_cast<int32_t>(object.width);
-//                int ymax = ymin + static_cast<int32_t>(object.height);
-
-//                std::string detectClass = labels_obj[object.classId].c_str();
-//            }
-//        }
-
-//        /*
-//        */
-
-//        // to half size or even smaller
-//        // resize(frame, frame, cv::Size(frame.cols/4, frame.rows/4));
-
-//        cv::namedWindow( "Display frame",cv::WINDOW_AUTOSIZE);
-//        imshow("Display frame", frame);
-
-
-//        //Increase frame count
-//        frameNum++;
-
-//        char c=(char)cv::waitKey(10);
-//        if(c==27)
-//            break;
-//    }
-
-
-
-    std::vector<std::pair<int, int>> dims{{250,250},{400,400}};
+    //std::vector<std::pair<int, int>>      dims{{1920,1920}};
+    std::vector<std::pair<int, int>>        dims{{200,200},{400,400}};
+    //std::vector<std::pair<int, int>>      dims{{200,200}};
 
     float tile_rect_factor					= 1.20f;
     float tile_edge_factor					= 0.25f;
     bool only_combine_similar_predictions   = true;
     bool combine_tile_predictions           = true;
     const std::string filename              = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
-    bool enable_debug                       = true;
+    bool enable_debug                       = false;
+    // Init multi frame capture vars for tracking
+    double fps                              = 0;
+    int frameNum                            = 0;
 
-    cv::Mat frame;
-
-    frame = cv::imread(filename);
     initTF();
 
-
-    //dims.push_back();
-
-
-    if (frame.empty())
-    {
-        /// @throw std::invalid_argument if the image is empty.
-        throw std::invalid_argument("cannot predict with an empty OpenCV image");
-    }
-
-    const float horizontal_factor		= static_cast<float>(frame.cols) / static_cast<float>(dims.at(0).first);
-    const float vertical_factor			= static_cast<float>(frame.rows) / static_cast<float>(dims.at(0).second);
-
-    const float horizontal_tiles_count	= std::round(std::max(1.0f, horizontal_factor	));
-    const float vertical_tiles_count	= std::round(std::max(1.0f, vertical_factor		));
-
-    // Set tile width
-    const float tile_width				= static_cast<float>(frame.cols) / horizontal_tiles_count;
-    const float tile_height				= static_cast<float>(frame.rows) / vertical_tiles_count;
-
-    // Create tile size
-    const cv::Size new_tile_size		= cv::Size(std::round(tile_width), std::round(tile_height));
-
-    // Init multi frame capture vars for tracking
-    double fps;
-    int frameNum = 0;
+    // Set labels
+    std::vector<std::string> labels_obj     = model_obj->getLabels();
 
     // Start and end times
     time_t start, end;
-
     // Start time
     time(&start);
-
     // Start the timer
-    std::chrono::high_resolution_clock::duration total_duration = std::chrono::milliseconds(0);
-
-    // Set labels
-    std::vector<std::string> labels_obj = model_obj->getLabels();
-
-
-
-//    original_image			= frame;
-//    binary_inverted_image	= cv::Mat();
-//    prediction_results		= results;
-//    duration				= total_duration;
-//    horizontal_tiles		= horizontal_tiles_count;
-//    vertical_tiles			= vertical_tiles_count;
-//    tile_size				= new_tile_size;
-
-//    return results;
+    std::chrono::high_resolution_clock::duration total_duration
+                                            = std::chrono::milliseconds(0);
 
     while(1){
 
-        if (horizontal_tiles_count == 1 and vertical_tiles_count == 1)
+        cv::Mat frame;
+        frame = cv::imread(filename);
+        if (frame.empty())
         {
-            // image is smaller than (or equal to) the network, so use the original predict() call
-            //return predict_internal(frame, new_threshold);
-
-            // Set frames
-            std::thread tObj(runObj, frame);
-
-            // Inc PLC
-            tObj.join();
-
-            //TODO POINTER
-            OUTPUT_OBJ result = model_obj->getObjResults();
-
+            /// @throw std::invalid_argument if the image is empty.
+            throw std::invalid_argument("cannot predict with an empty OpenCV image");
         }
-
-        // otherwise, if we get here then we have more than 1 tile
-
         // divide the original image into the right number of tiles and call predict() on each tile
         std::vector<PredictionResult> results;
         std::vector<size_t> indexes_of_predictions_near_edges;
         std::vector<cv::Mat> all_tile_mats;
 
+        for( int d=0; d < dims.size(); d++) {
+            const float horizontal_factor		= static_cast<float>(frame.cols) / static_cast<float>(dims.at(d).first);
+            const float vertical_factor			= static_cast<float>(frame.rows) / static_cast<float>(dims.at(d).second);
 
+            const float horizontal_tiles_count	= std::round(std::max(1.0f, horizontal_factor	));
+            const float vertical_tiles_count	= std::round(std::max(1.0f, vertical_factor		));
 
-        for (float y = 0.0f; y < vertical_tiles_count; y ++)
-        {
-            for (float x = 0.0f; x < horizontal_tiles_count; x ++)
+            // Set tile width
+            const float tile_width				= static_cast<float>(frame.cols) / horizontal_tiles_count;
+            const float tile_height				= static_cast<float>(frame.rows) / vertical_tiles_count;
+
+            // Create tile size
+            const cv::Size new_tile_size		= cv::Size(std::round(tile_width), std::round(tile_height));
+
+            if (horizontal_tiles_count == 1 and vertical_tiles_count == 1)
             {
+                // image is smaller than (or equal to) the network, so use the original predict() call
+                //return predict_internal(frame, new_threshold);
 
-                // Get tile count
-                const int tile_count = y * horizontal_tiles_count + x;
-
-                const int x_offset = std::round(x * tile_width);
-                const int y_offset = std::round(y * tile_height);
-
-                cv::Rect r(cv::Point(x_offset, y_offset), new_tile_size);
-
-                // make sure the rectangle does not extend beyond the edges of the image
-                if (r.x + r.width >= frame.cols)
-                {
-                    r.width = frame.cols - r.x - 1;
-                }
-
-                if (r.y + r.height >= frame.rows)
-                {
-                    r.height = frame.rows - r.y - 1;
-                }
-
-                cv::Mat roi = frame(r);
-
-                // Just object detection
                 // Set frames
-                std::thread tObj(runObj, roi);
+               std::thread tObj(runObj, frame);
 
-                // Inc PLC
-                tObj.join();
+               // Inc PLC
+               tObj.join();
 
-                //TODO POINTER
-                OUTPUT_OBJ result = model_obj->getObjResults();
+               //TODO POINTER
+               OUTPUT_OBJ result = model_obj->getObjResults();
 
+               for (const auto& object : result.objectList) {
+                   cv::rectangle(frame, cv::Rect(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y), static_cast<int32_t>(object.width), static_cast<int32_t>(object.height)), cv::Scalar(255, 255, 0), 3);
+                   cv::putText(frame, labels_obj[object.classId].c_str(), cv::Point(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y) + 10), cv::FONT_HERSHEY_PLAIN, 1, createCvColor(0, 0, 0), 3);
 
-                total_duration += duration;
-                // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
-    //            for (auto & prediction : prediction_results)
-                for (const auto& object : result.objectList)
-                {
-                    PredictionResult prediction;
-
-
-                    float score = static_cast<float>(object.score);
-                    int x0 = static_cast<int32_t>(object.x);
-                    int y0 = static_cast<int32_t>(object.y);
-
-                    int width = static_cast<int32_t>(object.width);
-                    int height = static_cast<int32_t>(object.height);
-                    prediction.original_point.x = static_cast<int32_t>((x0+width)/roi.cols);
-                    prediction.original_point.y = static_cast<int32_t>((y0+height)/roi.rows);
-
-                    prediction.original_size.width =static_cast<int32_t>(object.width/roi.cols);;
-                    prediction.original_size.height = static_cast<int32_t>(object.height/roi.rows);;
-
-                    prediction.best_class = static_cast<int32_t>(object.classId);
-                    //qDebug() << "HERE1";
-                    prediction.best_probability = score;
-
-                    //qDebug() << object.classId;
-
-                    prediction.name = "TEST"; //labels_obj[prediction.best_class];
-                    prediction.tile = tile_count;
-
-                    prediction.rect.x = x0;
-                    prediction.rect.y =  y0;
-
-                    prediction.rect.width = width;
-                    prediction.rect.height = height;
-
-                    //track which predictions are near the edges, because we may need to re-examine them and join them after we finish with all the tiles
-
-                    if (combine_tile_predictions)
-                    {
-                        const int minimum_horizontal_distance	= tile_edge_factor * prediction.rect.width;
-                        const int minimum_vertical_distance		= tile_edge_factor * prediction.rect.height;
-                        if (prediction.rect.x <= minimum_horizontal_distance					or
-                            prediction.rect.y <= minimum_vertical_distance						or
-                            roi.cols - prediction.rect.br().x <= minimum_horizontal_distance	or
-                            roi.rows - prediction.rect.br().y <= minimum_vertical_distance		)
-                        {
-                            // this prediction is near one of the tile borders so we need to remember it
-                            indexes_of_predictions_near_edges.push_back(results.size());
-                        }
-                    }
-
-                    // every prediction needs to have x_offset and y_offset added to it
-                    prediction.rect.x += x_offset;
-                    prediction.rect.y += y_offset;
-                    prediction.tile = tile_count;
-
-                    if (enable_debug)
-                    {
-                        // draw a black-on-white debug label on the top side of the annotation
-
-                        const std::string label		= "T777EST"; //std::to_string(results.size());
-                        const auto font				= cv::HersheyFonts::FONT_HERSHEY_PLAIN;
-                        const auto scale			= 0.75;
-                        const auto thickness		= 1;
-                        int baseline				= 0;
-                        const cv::Size text_size	= cv::getTextSize(label, font, scale, thickness, &baseline);
-                        const int text_half_width	= text_size.width			/ 2;
-                        const int text_half_height	= text_size.height			/ 2;
-                        const int pred_half_width	= prediction.rect.width		/ 2;
-                        const int pred_half_height	= prediction.rect.height	/ 2;
-
-                        // put the text exactly in the middle of the prediction
-                        const cv::Rect label_rect(
-                                prediction.rect.x + pred_half_width - text_half_width,
-                                prediction.rect.y + pred_half_height - text_half_height,
-                                text_size.width, text_size.height);
-                        cv::rectangle(frame, label_rect, {255, 255, 255}, cv::FILLED, cv::LINE_AA);
-                        cv::putText(frame, label, cv::Point(label_rect.x, label_rect.y + label_rect.height), font, scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
-                    }
-
-                    // the original point and size are based on only 1 tile, so they also need to be fixed
-
-                    prediction.original_point.x = (static_cast<float>(prediction.rect.x) + static_cast<float>(prediction.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
-                    prediction.original_point.y = (static_cast<float>(prediction.rect.y) + static_cast<float>(prediction.rect.height) / 2.0f) / static_cast<float>(frame.rows);
-
-                    prediction.original_size.width	= static_cast<float>(prediction.rect.width	) / static_cast<float>(frame.cols);
-                    prediction.original_size.height	= static_cast<float>(prediction.rect.height	) / static_cast<float>(frame.rows);
-
-                    results.push_back(prediction);
-                }
-
-
+                   if (object.hasCrop == true){
+                       int xmin = static_cast<int32_t>(object.x);
+                       int ymin = static_cast<int32_t>(object.y);
+                       int xmax = xmin + static_cast<int32_t>(object.width);
+                       int ymax = ymin + static_cast<int32_t>(object.height);
+                   }
+               }
 
             }
-        }
+            else{
 
-        if (indexes_of_predictions_near_edges.empty() == false)
-        {
-            // we need to go through all the results from the various tiles and merged together the ones that are side-by-side
+                // otherwise, if we get here then we have more than 1 tile
 
-            for (const auto & lhs_idx : indexes_of_predictions_near_edges)
-            {
-                if (results[lhs_idx].rect.area() == 0 and results[lhs_idx].tile == -1)
+
+                for (float y = 0.0f; y < vertical_tiles_count; y ++)
                 {
-                    // this items has already been consumed and is marked for deletion
-                    continue;
+                    for (float x = 0.0f; x < horizontal_tiles_count; x ++)
+                    {
+
+                        // Get tile count
+                        const int tile_count = y * horizontal_tiles_count + x;
+
+                        const int x_offset = std::round(x * tile_width);
+                        const int y_offset = std::round(y * tile_height);
+
+                        cv::Rect r(cv::Point(x_offset, y_offset), new_tile_size);
+
+                        // make sure the rectangle does not extend beyond the edges of the image
+                        if (r.x + r.width >= frame.cols)
+                        {
+                            r.width = frame.cols - r.x - 1;
+                        }
+
+                        if (r.y + r.height >= frame.rows)
+                        {
+                            r.height = frame.rows - r.y - 1;
+                        }
+
+                        cv::Mat roi = frame(r);
+
+                        // Just object detection
+                        // Set frames
+                        std::thread tObj(runObj, roi);
+
+                        // Inc PLC
+                        tObj.join();
+
+                        //TODO POINTER
+                        OUTPUT_OBJ result = model_obj->getObjResults();
+
+    //                    total_duration += duration;
+                        // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
+            //            for (auto & prediction : prediction_results)
+                        for (const auto& object : result.objectList)
+                        {
+                            PredictionResult prediction;
+
+
+                            float score = static_cast<float>(object.score);
+                            int x0 = static_cast<int32_t>(object.x);
+                            int y0 = static_cast<int32_t>(object.y);
+
+                            int width = static_cast<int32_t>(object.width);
+                            int height = static_cast<int32_t>(object.height);
+                            prediction.original_point.x = static_cast<int32_t>((x0+width)/roi.cols);
+                            prediction.original_point.y = static_cast<int32_t>((y0+height)/roi.rows);
+
+                            prediction.original_size.width =static_cast<int32_t>(object.width/roi.cols);;
+                            prediction.original_size.height = static_cast<int32_t>(object.height/roi.rows);;
+
+                            prediction.best_class = static_cast<int32_t>(object.classId);
+                            prediction.best_probability = score;
+
+                            prediction.name = labels_obj[prediction.best_class];
+                            prediction.tile = tile_count;
+
+                            prediction.rect.x = x0;
+                            prediction.rect.y =  y0;
+
+                            prediction.rect.width = width;
+                            prediction.rect.height = height;
+
+                            //track which predictions are near the edges, because we may need to re-examine them and join them after we finish with all the tiles
+
+                            if (combine_tile_predictions)
+                            {
+                                const int minimum_horizontal_distance	= tile_edge_factor * prediction.rect.width;
+                                const int minimum_vertical_distance		= tile_edge_factor * prediction.rect.height;
+                                if (prediction.rect.x <= minimum_horizontal_distance					or
+                                    prediction.rect.y <= minimum_vertical_distance						or
+                                    roi.cols - prediction.rect.br().x <= minimum_horizontal_distance	or
+                                    roi.rows - prediction.rect.br().y <= minimum_vertical_distance		)
+                                {
+                                    // this prediction is near one of the tile borders so we need to remember it
+                                    indexes_of_predictions_near_edges.push_back(results.size());
+                                }
+                            }
+
+                            // every prediction needs to have x_offset and y_offset added to it
+                            prediction.rect.x += x_offset;
+                            prediction.rect.y += y_offset;
+                            prediction.tile = tile_count;
+
+                            if (enable_debug)
+                            {
+                                // draw a black-on-white debug label on the top side of the annotation
+
+                                const std::string label		= labels_obj[prediction.best_class];
+                                const auto font				= cv::HersheyFonts::FONT_HERSHEY_PLAIN;
+                                const auto scale			= 0.75;
+                                const auto thickness		= 1;
+                                int baseline				= 0;
+                                const cv::Size text_size	= cv::getTextSize(label, font, scale, thickness, &baseline);
+                                const int text_half_width	= text_size.width			/ 2;
+                                const int text_half_height	= text_size.height			/ 2;
+                                const int pred_half_width	= prediction.rect.width		/ 2;
+                                const int pred_half_height	= prediction.rect.height	/ 2;
+
+                                // put the text exactly in the middle of the prediction
+                                const cv::Rect label_rect(
+                                        prediction.rect.x + pred_half_width - text_half_width,
+                                        prediction.rect.y + pred_half_height - text_half_height,
+                                        text_size.width, text_size.height);
+                                cv::rectangle(frame, label_rect, {255, 255, 255}, cv::FILLED, cv::LINE_AA);
+                                cv::putText(frame, label, cv::Point(label_rect.x, label_rect.y + label_rect.height), font, scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
+                            }
+
+                            // the original point and size are based on only 1 tile, so they also need to be fixed
+
+                            prediction.original_point.x = (static_cast<float>(prediction.rect.x) + static_cast<float>(prediction.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
+                            prediction.original_point.y = (static_cast<float>(prediction.rect.y) + static_cast<float>(prediction.rect.height) / 2.0f) / static_cast<float>(frame.rows);
+
+                            prediction.original_size.width	= static_cast<float>(prediction.rect.width	) / static_cast<float>(frame.cols);
+                            prediction.original_size.height	= static_cast<float>(prediction.rect.height	) / static_cast<float>(frame.rows);
+
+                            results.push_back(prediction);
+                        }
+                    }
                 }
 
-                const cv::Rect & lhs_rect = results[lhs_idx].rect;
-
-                // now compare this rect against all other rects that come *after* this
-                for (const auto & rhs_idx : indexes_of_predictions_near_edges)
+                if (indexes_of_predictions_near_edges.empty() == false)
                 {
-                    if (rhs_idx <= lhs_idx)
-                    {
-                        // if the RHS object is on an earlier tile, then we've already compared it
-                        continue;
-                    }
+                    // we need to go through all the results from the various tiles and merged together the ones that are side-by-side
 
-                    if (results[lhs_idx].tile == results[rhs_idx].tile)
+                    for (const auto & lhs_idx : indexes_of_predictions_near_edges)
                     {
-                        // if two objects are on the exact same tile, don't bother trying to combine them
-                        continue;
-                    }
-
-                    if (results[rhs_idx].rect.area() == 0 and results[rhs_idx].tile == -1)
-                    {
-                        // this item has already been consumed and is marked for deletion
-                        continue;
-                    }
-
-
-                    if (only_combine_similar_predictions)
-                    {
-                        // check the probabilities to see if there is any similarity:
-                        //
-                        // 1) does the LHS contain the best class from the RHS?
-                        // 2) does the RHS contain the best class from the LHS?
-                        //
-                        if (results[lhs_idx].all_probabilities.count(results[rhs_idx].best_class) == 0 and
-                            results[rhs_idx].all_probabilities.count(results[lhs_idx].best_class) == 0)
+                        if (results[lhs_idx].rect.area() == 0 and results[lhs_idx].tile == -1)
                         {
-                            // the two objects have completely different classes, so we cannot combine them together
+                            // this items has already been consumed and is marked for deletion
                             continue;
                         }
+
+                        const cv::Rect & lhs_rect = results[lhs_idx].rect;
+
+                        // now compare this rect against all other rects that come *after* this
+                        for (const auto & rhs_idx : indexes_of_predictions_near_edges)
+                        {
+                            if (rhs_idx <= lhs_idx)
+                            {
+                                // if the RHS object is on an earlier tile, then we've already compared it
+                                continue;
+                            }
+
+                            if (results[lhs_idx].tile == results[rhs_idx].tile)
+                            {
+                                // if two objects are on the exact same tile, don't bother trying to combine them
+                                continue;
+                            }
+
+                            if (results[rhs_idx].rect.area() == 0 and results[rhs_idx].tile == -1)
+                            {
+                                // this item has already been consumed and is marked for deletion
+                                continue;
+                            }
+
+
+                            if (only_combine_similar_predictions)
+                            {
+                                // check the probabilities to see if there is any similarity:
+                                //
+                                // 1) does the LHS contain the best class from the RHS?
+                                // 2) does the RHS contain the best class from the LHS?
+                                //
+                                if (results[lhs_idx].all_probabilities.count(results[rhs_idx].best_class) == 0 and
+                                    results[rhs_idx].all_probabilities.count(results[lhs_idx].best_class) == 0)
+                                {
+                                    // the two objects have completely different classes, so we cannot combine them together
+                                    continue;
+                                }
+                            }
+
+                            const cv::Rect & rhs_rect		= results[rhs_idx].rect;
+                            const cv::Rect combined_rect	= lhs_rect | rhs_rect;
+
+                            // if this is a good match, then the area of the combined rect will be similar to the area of lhs+rhs
+                            const int lhs_area		= lhs_rect		.area();
+                            const int rhs_area		= rhs_rect		.area();
+                            const int lhs_plus_rhs	= (lhs_area + rhs_area) * tile_rect_factor;
+                            const int combined_area	= combined_rect	.area();
+
+                            if (combined_area <= lhs_plus_rhs)
+                            {
+                                auto & lhs = results[lhs_idx];
+                                auto & rhs = results[rhs_idx];
+
+                                lhs.rect = combined_rect;
+
+                                lhs.original_point.x = (static_cast<float>(lhs.rect.x) + static_cast<float>(lhs.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
+                                lhs.original_point.y = (static_cast<float>(lhs.rect.y) + static_cast<float>(lhs.rect.height	) / 2.0f) / static_cast<float>(frame.rows);
+
+                                lhs.original_size.width		= static_cast<float>(lhs.rect.width	) / static_cast<float>(frame.cols);
+                                lhs.original_size.height	= static_cast<float>(lhs.rect.height) / static_cast<float>(frame.rows);
+
+                                // rebuild "all_probabilities" by combining both objects and keeping the max percentage
+                                for (auto iter : rhs.all_probabilities)
+                                {
+                                    const auto & key		= iter.first;
+                                    const auto & rhs_val	= iter.second;
+                                    const auto & lhs_val	= lhs.all_probabilities[key];
+
+                                    lhs.all_probabilities[key] = std::max(lhs_val, rhs_val);
+                                }
+
+                                // come up with a decent + consistent name to use for this object
+
+                                //name_prediction(lhs);
+
+                                // mark the RHS to be deleted once we're done looping through all the results
+                                rhs.rect = {0, 0, 0, 0};
+                                rhs.tile = -1;
+                            }
+                        }
                     }
 
-                    const cv::Rect & rhs_rect		= results[rhs_idx].rect;
-                    const cv::Rect combined_rect	= lhs_rect | rhs_rect;
-
-                    // if this is a good match, then the area of the combined rect will be similar to the area of lhs+rhs
-                    const int lhs_area		= lhs_rect		.area();
-                    const int rhs_area		= rhs_rect		.area();
-                    const int lhs_plus_rhs	= (lhs_area + rhs_area) * tile_rect_factor;
-                    const int combined_area	= combined_rect	.area();
-
-                    if (combined_area <= lhs_plus_rhs)
+                    // now go through the results and delete any with an empty rect and tile of -1
+                    auto iter = results.begin();
+                    while (iter != results.end())
                     {
-                        auto & lhs = results[lhs_idx];
-                        auto & rhs = results[rhs_idx];
-
-                        lhs.rect = combined_rect;
-
-                        lhs.original_point.x = (static_cast<float>(lhs.rect.x) + static_cast<float>(lhs.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
-                        lhs.original_point.y = (static_cast<float>(lhs.rect.y) + static_cast<float>(lhs.rect.height	) / 2.0f) / static_cast<float>(frame.rows);
-
-                        lhs.original_size.width		= static_cast<float>(lhs.rect.width	) / static_cast<float>(frame.cols);
-                        lhs.original_size.height	= static_cast<float>(lhs.rect.height) / static_cast<float>(frame.rows);
-
-                        // rebuild "all_probabilities" by combining both objects and keeping the max percentage
-                        for (auto iter : rhs.all_probabilities)
+                        if (iter->rect.area() == 0 and iter->tile == -1)
                         {
-                            const auto & key		= iter.first;
-                            const auto & rhs_val	= iter.second;
-                            const auto & lhs_val	= lhs.all_probabilities[key];
+                            // delete this prediction from the results since it has been combined with something else
+                            iter = results.erase(iter);
+                        }
+                        else
+                        {
+                            iter ++;
+                        }
+                    }
+                }
 
-                            lhs.all_probabilities[key] = std::max(lhs_val, rhs_val);
+                if (enable_debug)
+                {
+                    // draw vertical lines to show the tiles
+                    for (float x=1.0; x < horizontal_tiles_count; x++)
+                    {
+                        const int x_pos = std::round(frame.cols / horizontal_tiles_count * x);
+                        cv::line(frame, cv::Point(x_pos, 0), cv::Point(x_pos, frame.rows), {255, 0, 0});
+                    }
+
+                    // draw horizontal lines to show the tiles
+                    for (float y=1.0; y < vertical_tiles_count; y++)
+                    {
+                        const int y_pos = std::round(frame.rows / vertical_tiles_count * y);
+                        cv::line(frame, cv::Point(0, y_pos), cv::Point(frame.cols, y_pos), {255, 0, 0});
+                    }
+                }
+
+                int annotation_line_thickness           = 2;
+                float threshold							= 0.5f;
+                float annotation_shade_predictions		= 0.25;
+                auto colour                             = cv::Scalar(0x5E, 0x35, 0xFF);
+                bool annotation_suppress_all_labels		= false;
+                cv::HersheyFonts annotation_font_face	= cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+                float annotation_font_scale				= 0.5;
+                int annotation_font_thickness			= 1;
+                bool annotation_auto_hide_labels		= true;
+
+                for (const auto & pred : results)
+                {
+    //                if (config.annotation_suppress_classes.count(pred.best_class) != 0)
+    //                {
+    //                    continue;
+    //                }
+
+                    if (annotation_line_thickness > 0 and pred.best_probability >= threshold)
+                    {
+                        //const auto colour = config.annotation_colours[pred.best_class % config.annotation_colours.size()];
+
+                        int line_thickness_or_fill = annotation_line_thickness;
+                        if (annotation_shade_predictions >= 1.0)
+                        {
+                            line_thickness_or_fill = cv::FILLED;
+                        }
+                        else if (annotation_shade_predictions > 0.0)
+                        {
+                            cv::Mat roi = frame(pred.rect);
+                            cv::Mat coloured_rect(roi.size(), roi.type(), colour);
+
+                            const double alpha = annotation_shade_predictions;
+                            const double beta = 1.0 - alpha;
+                            cv::addWeighted(coloured_rect, alpha, roi, beta, 0.0, roi);
                         }
 
-                        // come up with a decent + consistent name to use for this object
+            //			std::cout << "class id=" << pred.best_class << ", probability=" << pred.best_probability << ", point=(" << pred.rect.x << "," << pred.rect.y << "), name=\"" << pred.name << "\", duration=" << duration_string() << std::endl;
+                        cv::rectangle(frame, pred.rect, {0x5E, 0x35, 0xFF}, line_thickness_or_fill);
 
-                        //name_prediction(lhs);
+                        if (annotation_suppress_all_labels)
+                        {
+                            continue;
+                        }
 
-                        // mark the RHS to be deleted once we're done looping through all the results
-                        rhs.rect = {0, 0, 0, 0};
-                        rhs.tile = -1;
+                        int baseline = 0;
+                        const cv::Size text_size = cv::getTextSize(pred.name, annotation_font_face, annotation_font_scale, annotation_font_thickness, &baseline);
+
+                        if (annotation_auto_hide_labels)
+                        {
+                            if (text_size.width >= pred.rect.width or
+                                text_size.height >= pred.rect.height)
+                            {
+                                // label is too large to display
+                                continue;
+                            }
+                        }
+    //                    int baseline = 0;
+    //                    int text_size = 2;
+                        cv::Rect r(cv::Point(pred.rect.x - annotation_line_thickness/2, pred.rect.y -2 - baseline + annotation_line_thickness), cv::Size(2 + annotation_line_thickness, 2 + baseline));
+                        if (r.x < 0) r.x = 0;																			// shift the label to the very left edge of the screen, otherwise it would be off-screen
+                        if (r.x + r.width >= frame.cols) r.x = pred.rect.x + pred.rect.width - r.width + 1;	// first attempt at pushing the label to the left
+                        if (r.x + r.width >= frame.cols) r.x = frame.cols - r.width;				// more drastic attempt at pushing the label to the left
+
+                        if (r.y < 0) r.y = pred.rect.y + pred.rect.height;	// shift the label to the bottom of the prediction, otherwise it would be off-screen
+                        if (r.y + r.height >= frame.rows) r.y = pred.rect.y + 1; // shift the label to the inside-top of the prediction (CV seems to have trouble drawing text where the upper bound is y=0, so move it down 1 pixel)
+                        if (r.y < 0) r.y = 0; // shift the label to the top of the image if it is off-screen
+
+                        cv::rectangle(frame, r, {0x5E, 0x35, 0xFF}, cv::FILLED);
+                        cv::putText(frame, pred.name, cv::Point(r.x + annotation_line_thickness/2, r.y +2), annotation_font_face, annotation_font_scale, cv::Scalar(0,0,0), annotation_font_thickness, cv::LINE_AA);
                     }
                 }
-            }
 
-            // now go through the results and delete any with an empty rect and tile of -1
-            auto iter = results.begin();
-            while (iter != results.end())
-            {
-                if (iter->rect.area() == 0 and iter->tile == -1)
-                {
-                    // delete this prediction from the results since it has been combined with something else
-                    iter = results.erase(iter);
-                }
-                else
-                {
-                    iter ++;
-                }
             }
         }
 
-        if (enable_debug)
-        {
-            // draw vertical lines to show the tiles
-            for (float x=1.0; x < horizontal_tiles_count; x++)
-            {
-                const int x_pos = std::round(frame.cols / horizontal_tiles_count * x);
-                cv::line(frame, cv::Point(x_pos, 0), cv::Point(x_pos, frame.rows), {255, 0, 0});
-            }
-
-            // draw horizontal lines to show the tiles
-            for (float y=1.0; y < vertical_tiles_count; y++)
-            {
-                const int y_pos = std::round(frame.rows / vertical_tiles_count * y);
-                cv::line(frame, cv::Point(0, y_pos), cv::Point(frame.cols, y_pos), {255, 0, 0});
-            }
-        }
         cv::namedWindow( "Display frame",cv::WINDOW_AUTOSIZE);
         imshow("Display frame", frame);
-
 
         //Increase frame count
         frameNum++;
@@ -978,6 +661,14 @@ int main(int argc, char *argv[])
         if(c==27)
             break;
     }
+
+    //    original_image			= frame;
+    //    binary_inverted_image	= cv::Mat();
+    //    prediction_results		= results;
+    //    duration				= total_duration;
+    //    horizontal_tiles		= horizontal_tiles_count;
+    //    vertical_tiles			= vertical_tiles_count;
+    //    tile_size				= new_tile_size;
 
     time(&end);
 
@@ -998,5 +689,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-

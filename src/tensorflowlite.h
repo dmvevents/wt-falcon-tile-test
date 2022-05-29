@@ -65,7 +65,7 @@ typedef struct {
 
 typedef struct {
     int32_t objectNum;
-    BBOX objectList[NUM_MAX_RESULT];
+    std::vector<BBOX> objectList;
     double timePreProcess;   // [msec]
     double timeInference;    // [msec]
     double timePostProcess;  // [msec]

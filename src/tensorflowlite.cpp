@@ -199,26 +199,33 @@ void Tensorflowlite::runDet()
 
     int objectNum = 0;
 
+    outResults.objectList.clear();
     for (int i = 0; i < count[0]; ++i) {
+
       const int id = std::round(ids[i]);
       const float score = scores[i];
-      outResults.objectList[objectNum].hasCrop = false;
       if (score >= threshold){
+
+          BBOX tmpBox;
+
           //continue;
           const float ymin = std::max(0.0f, bboxes[4 * i])*height;
           const float xmin = std::max(0.0f, bboxes[4 * i + 1])*width;
           const float ymax = std::min(1.0f, bboxes[4 * i + 2])*height;
           const float xmax = std::min(1.0f, bboxes[4 * i + 3])*width;
+
           //q.push(Object{id, score, BBox<float>{ymin, xmin, ymax, xmax}});
           //if (q.size() > top_k) q.pop();
-          qDebug() << "ID: ", ids[i];
-          outResults.objectList[objectNum].classId = id;
+          tmpBox.hasCrop = false;
+
+          tmpBox.classId = id;
+
           //snprintf(outputParam->objectList[objectNum].label, sizeof(outputParam->objectList[objectNum].label), "%s", object.label.c_str());
-          outResults.objectList[objectNum].score = score;
-          outResults.objectList[objectNum].x = xmin;
-          outResults.objectList[objectNum].y = ymin;
-          outResults.objectList[objectNum].width = xmax- xmin ;
-          outResults.objectList[objectNum].height = ymax - ymin;
+          tmpBox.score = score;
+          tmpBox.x = xmin;
+          tmpBox.y = ymin;
+          tmpBox.width = xmax- xmin ;
+          tmpBox.height = ymax - ymin;
 
           if ((xmax - xmin) < (frame.cols-0)){
 
@@ -233,8 +240,8 @@ void Tensorflowlite::runDet()
 
                   try{
                     cv::Mat crop = frame(region_of_interest);
-                    outResults.objectList[objectNum].crop = crop.clone();
-                    outResults.objectList[objectNum].hasCrop = true;
+                    tmpBox.crop = crop.clone();
+                    tmpBox.hasCrop = true;
                   }
                   catch (int e)
                   {
@@ -244,6 +251,7 @@ void Tensorflowlite::runDet()
 
 
           }
+          outResults.objectList.push_back(tmpBox);
           objectNum++;
           if (objectNum >= NUM_MAX_RESULT) break;
       }
@@ -256,9 +264,9 @@ void Tensorflowlite::runDet()
     outResults.timeInference = static_cast<std::chrono::duration<double>>(tInference1 - tInference0).count() * 1000.0;
     outResults.timePostProcess = static_cast<std::chrono::duration<double>>(tPostProcess1 - tPostProcess0).count() * 1000.0;
 
-//    std::cout << "Time PreProcess: " << outResults.timePreProcess << std::endl;
-//    std::cout << "Time Inference: " << outResults.timeInference << std::endl;
-//    std::cout << "Time PostProcess: " << outResults.timePostProcess << std::endl;
+    std::cout << "Time PreProcess: " << outResults.timePreProcess << std::endl;
+    std::cout << "Time Inference: " << outResults.timeInference << std::endl;
+    std::cout << "Time PostProcess: " << outResults.timePostProcess << std::endl;
 
 }
 
