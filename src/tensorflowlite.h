@@ -85,7 +85,9 @@ typedef struct {
 #define MODEL_WIDTH 224
 #define MODEL_HEIGHT 224
 
-#define MODEL_WIDTH_DET 300
+//#define MODEL_WIDTH_DET 300
+#define MODEL_WIDTH_DET 400
+
 #define MODEL_HEIGHT_DET 300
 
 //#define MODEL_WIDTH_DET 320

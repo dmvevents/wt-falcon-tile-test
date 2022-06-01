@@ -26,21 +26,6 @@
 
 #include <QtGlobal>
 
-/* Model parameters */
-#define MODEL_WIDTH 224
-#define MODEL_HEIGHT 224
-#define MODEL_CHANNEL 3
-
-/*** Function ***/
-static cv::Scalar createCvColor(int32_t b, int32_t g, int32_t r) {
-
-#ifdef CV_COLOR_IS_RGB
-    return cv::Scalar(r, g, b);
-#else
-    return cv::Scalar(b, g, r);
-#endif
-}
-
 struct PredictionResult final
 {
     /** OpenCV rectangle which describes where the object is located in the original image.
@@ -145,25 +130,68 @@ struct PredictionResult final
     int tile;
 };
 
+/* Model parameters */
+#define MODEL_WIDTH 224
+#define MODEL_HEIGHT 224
+#define MODEL_CHANNEL 3
+
+
+//std::vector<std::pair<int, int>>      dims{{1920,1920}};
+//    std::vector<std::pair<int, int>>        dims{{400,300},{500,500}};
+std::vector<std::pair<int, int>>        dims{{400,300}};
+
+float tile_rect_factor					= 1.20f;
+float tile_edge_factor					= 4.25f;
+bool only_combine_similar_predictions   = false;
+bool combine_tile_predictions           = true;
+
+bool enable_debug                       = true;
+// Init multi frame capture vars for tracking
+double fps                              = 0;
+int frameNum                            = 0;
+std::vector<PredictionResult>           results;
+cv::Mat                                 frame;
+std::vector<size_t>                     indexes_of_predictions_near_edges;
+/* Create Locks for Threads*/
+std::mutex                              mutex;
+std::vector<std::string>                labels_obj;
+
+/*** Function ***/
+static cv::Scalar createCvColor(int32_t b, int32_t g, int32_t r) {
+
+#ifdef CV_COLOR_IS_RGB
+    return cv::Scalar(r, g, b);
+#else
+    return cv::Scalar(b, g, r);
+#endif
+}
+
+
 /* Declare Ml Models */
 Tensorflowlite* model_obj;
-Tensorflowlite* model_class;
-Tensorflowlite* model_class_crop;
-Tensorflowlite* model_class_child;
+Tensorflowlite* model_obj1;
+Tensorflowlite* model_obj2;
+Tensorflowlite* model_obj3;
+Tensorflowlite* model_obj4;
+Tensorflowlite* model_obj5;
+Tensorflowlite* model_obj6;
+
 
 void initTF(){
 
     /* Create object detection model */
-    const char* model_f_obj = "/home/anton/Git/pycoral/test_data/ssd_mobilenet_v2_coco_quant_no_nms_edgetpu.tflite";
-    const char* model_l_obj = "/home/anton/Git/pycoral/test_data/coco_labels.txt";
-    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,.5);
+    const char* model_f_obj = "/home/watad/wt-sadara-vision-main/assets/ssdlite_mobiledet_watad_edgetpu.tflite";
+    const char* model_l_obj = "/home/watad/wt-sadara-vision-main/assets/labels.txt";
+    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,.7);
+    labels_obj     = model_obj->getLabels();
 
-//    model_obj1 = new Tensorflowlite(1,model_f_obj, model_l_obj,.5);
-//    model_obj2 = new Tensorflowlite(2,model_f_obj, model_l_obj,.5);
-//    model_obj3 = new Tensorflowlite(3,model_f_obj, model_l_obj,.5);
-//    model_obj4 = new Tensorflowlite(4,model_f_obj, model_l_obj,.5);
-//    model_obj5 = new Tensorflowlite(5,model_f_obj, model_l_obj,.5);
-//    model_obj6 = new Tensorflowlite(6,model_f_obj, model_l_obj,.5);
+    model_obj1 = new Tensorflowlite(1,model_f_obj, model_l_obj,.5);
+    model_obj2 = new Tensorflowlite(2,model_f_obj, model_l_obj,.5);
+    model_obj3 = new Tensorflowlite(3,model_f_obj, model_l_obj,.5);
+    model_obj4 = new Tensorflowlite(4,model_f_obj, model_l_obj,.5);
+    model_obj5 = new Tensorflowlite(5,model_f_obj, model_l_obj,.5);
+    model_obj6 = new Tensorflowlite(6,model_f_obj, model_l_obj,.5);
+
 //    model_obj7 = new Tensorflowlite(7,model_f_obj, model_l_obj,.5);
 //    model_obj8 = new Tensorflowlite(8,model_f_obj, model_l_obj,.5);
 //    model_obj9 = new Tensorflowlite(9,model_f_obj, model_l_obj,.5);
@@ -177,6 +205,141 @@ void initTF(){
 void runObj(cv::Mat frame){
     model_obj->setFrame(frame);
     model_obj->runDet();
+}
+
+int runtile(cv::Mat roi, int tile_count, int tile_edge_factor, int x_offset, int y_offset){
+
+    OUTPUT_OBJ result;
+    if(tile_count == 1){
+        model_obj->setFrame(roi);
+        model_obj->runDet();
+        result = model_obj->getObjResults();
+
+    }
+    else if(tile_count == 2){
+        model_obj1->setFrame(roi);
+        model_obj1->runDet();
+        result = model_obj1->getObjResults();
+
+    }
+    else if(tile_count == 3){
+        model_obj2->setFrame(roi);
+        model_obj2->runDet();
+        result = model_obj2->getObjResults();
+
+    }
+    else if(tile_count == 4){
+        model_obj3->setFrame(roi);
+        model_obj3->runDet();
+        result = model_obj3->getObjResults();
+
+    }
+    else if(tile_count == 5){
+        model_obj4->setFrame(roi);
+        model_obj4->runDet();
+        result = model_obj4->getObjResults();
+
+    }
+    else if(tile_count == 6){
+        model_obj5->setFrame(roi);
+        model_obj5->runDet();
+        result = model_obj5->getObjResults();
+
+    }
+    else{
+        return 0;
+    }
+
+
+    //TODO POINTER
+
+    // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
+    for (const auto& object : result.objectList)
+    {
+
+        // Create object for prediction to store
+        PredictionResult prediction;
+
+        float score = static_cast<float>(object.score);
+        int x0 = static_cast<int32_t>(object.x);
+        int y0 = static_cast<int32_t>(object.y);
+
+        int width = static_cast<int32_t>(object.width);
+        int height = static_cast<int32_t>(object.height);
+        prediction.original_point.x = static_cast<int32_t>((x0+width)/roi.cols);
+        prediction.original_point.y = static_cast<int32_t>((y0+height)/roi.rows);
+
+        prediction.original_size.width =static_cast<int32_t>(object.width/roi.cols);;
+        prediction.original_size.height = static_cast<int32_t>(object.height/roi.rows);;
+
+        prediction.best_class = static_cast<int32_t>(object.classId);
+        prediction.best_probability = score;
+
+        prediction.name = labels_obj[prediction.best_class];
+        prediction.tile = tile_count;
+
+        prediction.rect.x = x0;
+        prediction.rect.y =  y0;
+
+        prediction.rect.width = width;
+        prediction.rect.height = height;
+
+        //track which predictions are near the edges, because we may need to re-examine them and join them after we finish with all the tiles
+
+        mutex.lock();
+        if (combine_tile_predictions)
+        {
+            const int minimum_horizontal_distance	= tile_edge_factor * prediction.rect.width;
+            const int minimum_vertical_distance		= tile_edge_factor * prediction.rect.height;
+            if (prediction.rect.x <= minimum_horizontal_distance					or
+                prediction.rect.y <= minimum_vertical_distance						or
+                roi.cols - prediction.rect.br().x <= minimum_horizontal_distance	or
+                roi.rows - prediction.rect.br().y <= minimum_vertical_distance		)
+            {
+                // this prediction is near one of the tile borders so we need to remember it
+                indexes_of_predictions_near_edges.push_back(results.size());
+            }
+        }
+
+        // every prediction needs to have x_offset and y_offset added to it
+        prediction.rect.x += x_offset;
+        prediction.rect.y += y_offset;
+
+        if (enable_debug)
+        {
+            // draw a black-on-white debug label on the top side of the annotation
+
+            const std::string label		= labels_obj[prediction.best_class];
+            const auto font				= cv::HersheyFonts::FONT_HERSHEY_PLAIN;
+            const auto scale			= 0.75;
+            const auto thickness		= 1;
+            int baseline				= 0;
+            const cv::Size text_size	= cv::getTextSize(label, font, scale, thickness, &baseline);
+            const int text_half_width	= text_size.width			/ 2;
+            const int text_half_height	= text_size.height			/ 2;
+            const int pred_half_width	= prediction.rect.width		/ 2;
+            const int pred_half_height	= prediction.rect.height	/ 2;
+
+            // put the text exactly in the middle of the prediction
+            const cv::Rect label_rect(
+                    prediction.rect.x + pred_half_width - text_half_width,
+                    prediction.rect.y + pred_half_height - text_half_height,
+                    text_size.width, text_size.height);
+            cv::rectangle(frame, label_rect, {255, 255, 255}, cv::FILLED, cv::LINE_AA);
+            cv::putText(frame, label, cv::Point(label_rect.x, label_rect.y + label_rect.height), font, scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
+        }
+
+        // the original point and size are based on only 1 tile, so they also need to be fixed
+        prediction.original_point.x = (static_cast<float>(prediction.rect.x) + static_cast<float>(prediction.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
+        prediction.original_point.y = (static_cast<float>(prediction.rect.y) + static_cast<float>(prediction.rect.height) / 2.0f) / static_cast<float>(frame.rows);
+        prediction.original_size.width	= static_cast<float>(prediction.rect.width	) / static_cast<float>(frame.cols);
+        prediction.original_size.height	= static_cast<float>(prediction.rect.height	) / static_cast<float>(frame.rows);
+
+        results.push_back(prediction);
+
+        mutex.unlock();
+        return 1;
+    }
 }
 
 static void readLabel(const std::string filename, std::vector<std::string> &labels)
@@ -232,23 +395,9 @@ QJsonObject getJson(int w, int h, int xmin, int ymin, int xmax, int ymax, QStrin
     return json_obj;
 }
 
-QJsonObject data;
 
 int main(int argc, char *argv[])
 {
-    //std::vector<std::pair<int, int>>      dims{{1920,1920}};
-    std::vector<std::pair<int, int>>        dims{{200,200},{400,400}};
-    //std::vector<std::pair<int, int>>      dims{{200,200}};
-
-    float tile_rect_factor					= 1.20f;
-    float tile_edge_factor					= 0.25f;
-    bool only_combine_similar_predictions   = true;
-    bool combine_tile_predictions           = true;
-    const std::string filename              = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
-    bool enable_debug                       = false;
-    // Init multi frame capture vars for tracking
-    double fps                              = 0;
-    int frameNum                            = 0;
 
     initTF();
 
@@ -257,25 +406,43 @@ int main(int argc, char *argv[])
 
     // Start and end times
     time_t start, end;
+
     // Start time
     time(&start);
+
     // Start the timer
     std::chrono::high_resolution_clock::duration total_duration
                                             = std::chrono::milliseconds(0);
 
-    while(1){
+    const std::string filename              = "/home/watad/wt-sadara-vision-main/assets/Last.mp4";
+    //const std::string filename              = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
 
-        cv::Mat frame;
-        frame = cv::imread(filename);
+    cv::VideoCapture cap(filename);
+
+    // Check if camera opened successfully
+    if(!cap.isOpened()){
+        std::cout << "Error opening video stream or file" <<  std::endl;
+        return -1;
+    }
+
+    while(1){
+        //cv::Mat frame;
+
+        //frame = cv::imread(filename);
+        // Capture frame-by-frame
+         cap >> frame;
+
         if (frame.empty())
         {
             /// @throw std::invalid_argument if the image is empty.
             throw std::invalid_argument("cannot predict with an empty OpenCV image");
         }
+
         // divide the original image into the right number of tiles and call predict() on each tile
-        std::vector<PredictionResult> results;
-        std::vector<size_t> indexes_of_predictions_near_edges;
+
+        indexes_of_predictions_near_edges.clear();
         std::vector<cv::Mat> all_tile_mats;
+        results.clear();
 
         for( int d=0; d < dims.size(); d++) {
             const float horizontal_factor		= static_cast<float>(frame.cols) / static_cast<float>(dims.at(d).first);
@@ -316,13 +483,12 @@ int main(int argc, char *argv[])
                        int ymax = ymin + static_cast<int32_t>(object.height);
                    }
                }
-
             }
             else{
 
+                std::vector<std::thread> t;
+
                 // otherwise, if we get here then we have more than 1 tile
-
-
                 for (float y = 0.0f; y < vertical_tiles_count; y ++)
                 {
                     for (float x = 0.0f; x < horizontal_tiles_count; x ++)
@@ -351,102 +517,16 @@ int main(int argc, char *argv[])
 
                         // Just object detection
                         // Set frames
-                        std::thread tObj(runObj, roi);
+                        std::thread th(runtile,roi,  tile_count, tile_edge_factor, x_offset, y_offset);
 
-                        // Inc PLC
-                        tObj.join();
+                        t.push_back(std::move(th));  //<=== move (after, th doesn't hold it anymore
 
-                        //TODO POINTER
-                        OUTPUT_OBJ result = model_obj->getObjResults();
-
-    //                    total_duration += duration;
-                        // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
-            //            for (auto & prediction : prediction_results)
-                        for (const auto& object : result.objectList)
-                        {
-                            PredictionResult prediction;
-
-
-                            float score = static_cast<float>(object.score);
-                            int x0 = static_cast<int32_t>(object.x);
-                            int y0 = static_cast<int32_t>(object.y);
-
-                            int width = static_cast<int32_t>(object.width);
-                            int height = static_cast<int32_t>(object.height);
-                            prediction.original_point.x = static_cast<int32_t>((x0+width)/roi.cols);
-                            prediction.original_point.y = static_cast<int32_t>((y0+height)/roi.rows);
-
-                            prediction.original_size.width =static_cast<int32_t>(object.width/roi.cols);;
-                            prediction.original_size.height = static_cast<int32_t>(object.height/roi.rows);;
-
-                            prediction.best_class = static_cast<int32_t>(object.classId);
-                            prediction.best_probability = score;
-
-                            prediction.name = labels_obj[prediction.best_class];
-                            prediction.tile = tile_count;
-
-                            prediction.rect.x = x0;
-                            prediction.rect.y =  y0;
-
-                            prediction.rect.width = width;
-                            prediction.rect.height = height;
-
-                            //track which predictions are near the edges, because we may need to re-examine them and join them after we finish with all the tiles
-
-                            if (combine_tile_predictions)
-                            {
-                                const int minimum_horizontal_distance	= tile_edge_factor * prediction.rect.width;
-                                const int minimum_vertical_distance		= tile_edge_factor * prediction.rect.height;
-                                if (prediction.rect.x <= minimum_horizontal_distance					or
-                                    prediction.rect.y <= minimum_vertical_distance						or
-                                    roi.cols - prediction.rect.br().x <= minimum_horizontal_distance	or
-                                    roi.rows - prediction.rect.br().y <= minimum_vertical_distance		)
-                                {
-                                    // this prediction is near one of the tile borders so we need to remember it
-                                    indexes_of_predictions_near_edges.push_back(results.size());
-                                }
-                            }
-
-                            // every prediction needs to have x_offset and y_offset added to it
-                            prediction.rect.x += x_offset;
-                            prediction.rect.y += y_offset;
-                            prediction.tile = tile_count;
-
-                            if (enable_debug)
-                            {
-                                // draw a black-on-white debug label on the top side of the annotation
-
-                                const std::string label		= labels_obj[prediction.best_class];
-                                const auto font				= cv::HersheyFonts::FONT_HERSHEY_PLAIN;
-                                const auto scale			= 0.75;
-                                const auto thickness		= 1;
-                                int baseline				= 0;
-                                const cv::Size text_size	= cv::getTextSize(label, font, scale, thickness, &baseline);
-                                const int text_half_width	= text_size.width			/ 2;
-                                const int text_half_height	= text_size.height			/ 2;
-                                const int pred_half_width	= prediction.rect.width		/ 2;
-                                const int pred_half_height	= prediction.rect.height	/ 2;
-
-                                // put the text exactly in the middle of the prediction
-                                const cv::Rect label_rect(
-                                        prediction.rect.x + pred_half_width - text_half_width,
-                                        prediction.rect.y + pred_half_height - text_half_height,
-                                        text_size.width, text_size.height);
-                                cv::rectangle(frame, label_rect, {255, 255, 255}, cv::FILLED, cv::LINE_AA);
-                                cv::putText(frame, label, cv::Point(label_rect.x, label_rect.y + label_rect.height), font, scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
-                            }
-
-                            // the original point and size are based on only 1 tile, so they also need to be fixed
-
-                            prediction.original_point.x = (static_cast<float>(prediction.rect.x) + static_cast<float>(prediction.rect.width	) / 2.0f) / static_cast<float>(frame.cols);
-                            prediction.original_point.y = (static_cast<float>(prediction.rect.y) + static_cast<float>(prediction.rect.height) / 2.0f) / static_cast<float>(frame.rows);
-
-                            prediction.original_size.width	= static_cast<float>(prediction.rect.width	) / static_cast<float>(frame.cols);
-                            prediction.original_size.height	= static_cast<float>(prediction.rect.height	) / static_cast<float>(frame.rows);
-
-                            results.push_back(prediction);
-                        }
+                        //std::thread tObj(runObj, roi);
                     }
+                }
+
+                for(auto& th : t){              //<=== range-based for uses & reference
+                    th.join();
                 }
 
                 if (indexes_of_predictions_near_edges.empty() == false)
@@ -643,6 +723,7 @@ int main(int argc, char *argv[])
                         if (r.y + r.height >= frame.rows) r.y = pred.rect.y + 1; // shift the label to the inside-top of the prediction (CV seems to have trouble drawing text where the upper bound is y=0, so move it down 1 pixel)
                         if (r.y < 0) r.y = 0; // shift the label to the top of the image if it is off-screen
 
+
                         cv::rectangle(frame, r, {0x5E, 0x35, 0xFF}, cv::FILLED);
                         cv::putText(frame, pred.name, cv::Point(r.x + annotation_line_thickness/2, r.y +2), annotation_font_face, annotation_font_scale, cv::Scalar(0,0,0), annotation_font_thickness, cv::LINE_AA);
                     }
@@ -651,6 +732,10 @@ int main(int argc, char *argv[])
             }
         }
 
+
+        int down_width = frame.cols/2;
+        int down_height = frame.rows/2;
+        cv::resize(frame, frame, cv::Size(down_width, down_height), cv::INTER_LINEAR);
         cv::namedWindow( "Display frame",cv::WINDOW_AUTOSIZE);
         imshow("Display frame", frame);
 
