@@ -41,6 +41,7 @@
 #include <QJsonObject>
 #include <QByteArray>
 #include <QJsonDocument>
+#include <QDebug>
 
 #define NUM_MAX_RESULT 100
 
@@ -51,7 +52,7 @@ typedef struct {
 
 typedef struct {
     int32_t  classId;
-    char     label[256];
+    std::string label;
     double score;
     int32_t  x;
     int32_t  y;
@@ -100,7 +101,7 @@ class Tensorflowlite
 {
 public:
 
-    Tensorflowlite(int tpu_num, const char *model_f, const char *model_l, float threshold);
+    Tensorflowlite(int tpu_num, const char *model_f, const char *model_l, float threshold, bool tpu);
     ~Tensorflowlite();
 
     void readLabel();
@@ -120,6 +121,9 @@ public:
     std::string getJson(int w, int h, int xmin, int ymin, int xmax, int ymax, QString detectClass, QString dirLabel, QString time,
                         QString cropName, QString cropClassChild);
     void runAnom();
+    void runFace();
+    void runLand();
+    void runFt();
 private:
     const char* model_f;
     const char* model_l;
@@ -137,6 +141,11 @@ private:
     OUTPUT_CLASS outClass;
 
     float threshold;
+
+
+    int wanted_height;
+    int wanted_width;
+    int wanted_channels;
 
     /*** Global variable ***/
     //std::unique_ptr<DetectionEngine> s_engine;

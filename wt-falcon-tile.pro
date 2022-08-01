@@ -24,9 +24,9 @@ QMAKE_EXTRA_TARGETS += first copydata
 
 # Add modbus libary
 CONFIG += link_pkgconfig
-CONFIG +=  TENSORFLOW  EDGETPU OPENCV
+CONFIG +=  TENSORFLOW  EDGETPU OPENCV HCNETSDK
 
-OPENCV {PKGCONFIG +=  opencv4}
+OPENCV {PKGCONFIG +=  opencv}
 EDGETPU {LIBS += -l:libedgetpu.so.1.0}
 
 HOME = $$system(echo $HOME)
@@ -41,20 +41,35 @@ TENSORFLOW {
     LIBS += -ldl
 }
 
+HCNETSDK {
+    LIBS +=  -lpthread
+    LIBS += -lboost_thread -lboost_system
+    LIBS += -L//home/watad/Downloads/EN-HCNetSDKV6.1.6.3_build20200925_Linux64/lib -lPlayCtrl -lAudioRender -lSuperRender -lhcnetsdk
+    INCLUDEPATH += //home/watad/Downloads/EN-HCNetSDKV6.1.6.3_build20200925_Linux64/incEn
+    DEPENDPATH += //home/watad/Downloads/EN-HCNetSDKV6.1.6.3_build20200925_Linux64/incEn
+    INCLUDEPATH += /home/watad/hik-camera/
+
+}
+
+#/home/watad/Downloads/EN-HCNetSDKV6.1.6.3_build20200925_Linux64
 
 SOURCES += \
     src/main.cpp \
     src/base64.cpp \
     src/tensorflowlite.cpp \
     src/model_utils.cpp \
-    src/nms.cpp
+    src/nms.cpp \
+    /home/watad/hik-camera/HKIPCamCapture.cpp \
+    /home/watad/hik-camera/hkipcamera.cpp \
 
 HEADERS += \
     src/base64.h \
     src/tensorflowlite.h \
     src/my_precompiled_header.h \
     src/model_utils.h \
-    src/nms.h
+    src/nms.h \
+    /home/watad/hik-camera/HKIPCamCapture.h \
+    /home/watad/hik-camera/hkipcamera.h \
 
 
 PRECOMPILED_HEADER = src/my_precompiled_header.h
@@ -63,5 +78,6 @@ CONFIG += precompile_header
 
 DISTFILES += \
     assets/config.json \
-    Dockerfile
+    Dockerfile \
+    assets/config_dell.json
 

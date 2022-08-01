@@ -26,6 +26,27 @@
 
 #include <QtGlobal>
 
+#include <hkhelper.h>
+
+
+#include "HKIPCamCapture.h"
+
+
+long channel = 1;
+long streamtype = 1;
+HKIPCamCapture _hkipc1;
+HKIPCamCapture _hkipc2;
+HKIPCamCapture _hkipc3;
+
+std::string ip1 = "192.168.1.64";
+std::string ip2 = "192.168.1.65";
+std::string ip3 = "192.168.1.66";
+
+std::string username = "admin";
+std::string password = "Watad@2022";
+long port = 8000;
+
+
 struct PredictionResult final
 {
     /** OpenCV rectangle which describes where the object is located in the original image.
@@ -138,11 +159,11 @@ struct PredictionResult final
 
 //std::vector<std::pair<int, int>>      dims{{1920,1920}};
 //    std::vector<std::pair<int, int>>        dims{{400,300},{500,500}};
-std::vector<std::pair<int, int>>        dims{{400,300}};
+//std::vector<std::pair<int, int>>        dims{{1280,720}};
 
-float tile_rect_factor					= 1.20f;
-float tile_edge_factor					= 4.25f;
-bool only_combine_similar_predictions   = false;
+float tile_rect_factor					= 10.20f;
+float tile_edge_factor					= 40.25f;
+bool only_combine_similar_predictions   = true;
 bool combine_tile_predictions           = true;
 
 bool enable_debug                       = true;
@@ -150,7 +171,11 @@ bool enable_debug                       = true;
 double fps                              = 0;
 int frameNum                            = 0;
 std::vector<PredictionResult>           results;
+
 cv::Mat                                 frame;
+
+
+
 std::vector<size_t>                     indexes_of_predictions_near_edges;
 /* Create Locks for Threads*/
 std::mutex                              mutex;
@@ -175,22 +200,23 @@ Tensorflowlite* model_obj3;
 Tensorflowlite* model_obj4;
 Tensorflowlite* model_obj5;
 Tensorflowlite* model_obj6;
-
+Tensorflowlite* model_obj_org;
 
 void initTF(){
 
     /* Create object detection model */
-    const char* model_f_obj = "/home/watad/wt-sadara-vision-main/assets/ssdlite_mobiledet_watad_edgetpu.tflite";
-    const char* model_l_obj = "/home/watad/wt-sadara-vision-main/assets/labels.txt";
-    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,.7);
+    const char* model_f_obj = "/home/watad/build-wt-falcon-tile-Desktop-Debug/assets/ssdlite_mobilenet_tile_v1_edgetpu.tflite";
+    const char* model_l_obj = "/home/watad/build-wt-falcon-tile-Desktop-Debug/assets/labels_tile.txt";
+    const double con = .5;
+    model_obj = new Tensorflowlite(0,model_f_obj, model_l_obj,con,true);
     labels_obj     = model_obj->getLabels();
 
-    model_obj1 = new Tensorflowlite(1,model_f_obj, model_l_obj,.5);
-    model_obj2 = new Tensorflowlite(2,model_f_obj, model_l_obj,.5);
-    model_obj3 = new Tensorflowlite(3,model_f_obj, model_l_obj,.5);
-    model_obj4 = new Tensorflowlite(4,model_f_obj, model_l_obj,.5);
-    model_obj5 = new Tensorflowlite(5,model_f_obj, model_l_obj,.5);
-    model_obj6 = new Tensorflowlite(6,model_f_obj, model_l_obj,.5);
+    model_obj1 = new Tensorflowlite(1,model_f_obj, model_l_obj,con,true);
+    model_obj2 = new Tensorflowlite(2,model_f_obj, model_l_obj,con,true);
+    model_obj3 = new Tensorflowlite(3,model_f_obj, model_l_obj,con,true);
+    model_obj4 = new Tensorflowlite(4,model_f_obj, model_l_obj,con,true);
+    model_obj5 = new Tensorflowlite(5,model_f_obj, model_l_obj,con,true);
+    model_obj6 = new Tensorflowlite(6,model_f_obj, model_l_obj,con,true);
 
 //    model_obj7 = new Tensorflowlite(7,model_f_obj, model_l_obj,.5);
 //    model_obj8 = new Tensorflowlite(8,model_f_obj, model_l_obj,.5);
@@ -198,49 +224,56 @@ void initTF(){
 //    model_obj10 = new Tensorflowlite(10,model_f_obj, model_l_obj,.5);
 //    model_obj11 = new Tensorflowlite(11,model_f_obj, model_l_obj,.5);
 
+    model_obj_org = new Tensorflowlite(7,
+                                       "/home/watad/wt-sadara-vision-main/assets/ssdlite_mobiledet_watad_edgetpu.tflite",
+                                       "/home/watad/build-wt-falcon-tile-Desktop-Debug/assets/labels.txt",
+                                       con,
+                                       true);
+
     std::cout << "Tensorflow initialization: OK" << std::endl;
 }
 
 
 void runObj(cv::Mat frame){
-    model_obj->setFrame(frame);
-    model_obj->runDet();
+    model_obj_org->setFrame(frame);
+    model_obj_org->runDet();
 }
 
 int runtile(cv::Mat roi, int tile_count, int tile_edge_factor, int x_offset, int y_offset){
 
     OUTPUT_OBJ result;
-    if(tile_count == 1){
+    if(tile_count == 0){
         model_obj->setFrame(roi);
         model_obj->runDet();
         result = model_obj->getObjResults();
 
     }
-    else if(tile_count == 2){
+    else if(tile_count == 1){
         model_obj1->setFrame(roi);
         model_obj1->runDet();
         result = model_obj1->getObjResults();
+//        std::cout << result.objectNum << std::endl;
 
     }
-    else if(tile_count == 3){
+    else if(tile_count == 2){
         model_obj2->setFrame(roi);
         model_obj2->runDet();
         result = model_obj2->getObjResults();
 
     }
-    else if(tile_count == 4){
+    else if(tile_count == 3){
         model_obj3->setFrame(roi);
         model_obj3->runDet();
         result = model_obj3->getObjResults();
 
     }
-    else if(tile_count == 5){
+    else if(tile_count == 4){
         model_obj4->setFrame(roi);
         model_obj4->runDet();
         result = model_obj4->getObjResults();
 
     }
-    else if(tile_count == 6){
+    else if(tile_count == 5){
         model_obj5->setFrame(roi);
         model_obj5->runDet();
         result = model_obj5->getObjResults();
@@ -254,9 +287,14 @@ int runtile(cv::Mat roi, int tile_count, int tile_edge_factor, int x_offset, int
     //TODO POINTER
 
     // fix up the predictions -- need to compensate for the tile not being the top-left corner of the image, and the size of the tile being smaller than the image
+
+    int counter =0;
     for (const auto& object : result.objectList)
     {
-
+//        if(tile_count == 1){
+//            counter++;
+//            std::cout << "Counter: " << counter<< std::endl;
+//        }
         // Create object for prediction to store
         PredictionResult prediction;
 
@@ -338,8 +376,9 @@ int runtile(cv::Mat roi, int tile_count, int tile_edge_factor, int x_offset, int
         results.push_back(prediction);
 
         mutex.unlock();
-        return 1;
     }
+    return 1;
+
 }
 
 static void readLabel(const std::string filename, std::vector<std::string> &labels)
@@ -395,9 +434,79 @@ QJsonObject getJson(int w, int h, int xmin, int ymin, int xmax, int ymax, QStrin
     return json_obj;
 }
 
+cv::Mat GetSquareImage( const cv::Mat& img, int target_width = 500 )
+{
+    int width = img.cols,
+       height = img.rows;
+
+    cv::Mat square = cv::Mat::zeros( target_width, target_width, img.type() );
+
+    int max_dim = ( width >= height ) ? width : height;
+    float scale = ( ( float ) target_width ) / max_dim;
+    cv::Rect roi;
+    if ( width >= height )
+    {
+        roi.width = target_width;
+        roi.x = 0;
+        roi.height = height * scale;
+        //roi.y = ( target_width - roi.height ) / 2;
+        roi.y = target_width - roi.height;
+
+    }
+    else
+    {
+        roi.y = 0;
+        roi.height = target_width;
+        roi.width = width * scale;
+        roi.x = ( target_width - roi.width ) / 2;
+    }
+
+    cv::resize( img, square( roi ), roi.size() );
+
+    return square;
+}
 
 int main(int argc, char *argv[])
 {
+
+//    _hkipc1 = new HKIPCamCapture();
+    auto conn_param1 = _hkipc1.getConnectParam();
+    conn_param1.ip = ip1;
+    conn_param1.username = username;
+    conn_param1.password = password;
+    conn_param1.port = 8004;
+    conn_param1.channel = channel;
+    conn_param1.streamtype = streamtype;
+    conn_param1.link_mode = 1;
+    conn_param1.device_id = -1;
+    conn_param1.buffer_size = 20;
+    _hkipc1.setConnectParam(conn_param1);
+
+//    _hkipc2 = new HKIPCamCapture();
+    auto conn_param2 = _hkipc2.getConnectParam();
+    conn_param2.ip = ip2;
+    conn_param2.username = username;
+    conn_param2.password = password;
+    conn_param2.port = 8005;
+    conn_param2.channel = channel;
+    conn_param2.streamtype = streamtype;
+    conn_param2.link_mode = 1;
+    conn_param2.device_id = -1;
+    conn_param2.buffer_size = 20;
+    _hkipc2.setConnectParam(conn_param2);
+
+//    _hkipc3 = new HKIPCamCapture();
+    auto conn_param3 = _hkipc3.getConnectParam();
+    conn_param3.ip = ip3;
+    conn_param3.username = username;
+    conn_param3.password = password;
+    conn_param3.port = 8006;
+    conn_param3.channel = channel;
+    conn_param3.streamtype = streamtype;
+    conn_param3.link_mode = 1;
+    conn_param3.device_id = -1;
+    conn_param3.buffer_size = 20;
+    _hkipc3.setConnectParam(conn_param3);
 
     initTF();
 
@@ -414,29 +523,78 @@ int main(int argc, char *argv[])
     std::chrono::high_resolution_clock::duration total_duration
                                             = std::chrono::milliseconds(0);
 
-    const std::string filename              = "/home/watad/wt-sadara-vision-main/assets/Last.mp4";
+    //const std::string filename              = "/home/watad/wt-sadara-vision-main/assets/2ppl.mp4";
     //const std::string filename              = "/home/anton/Git/pycoral/test_data/kite_and_cold.jpg";
+//    const std::string filename1              = "rtsp://admin:Watad@2022@192.168.1.64:554/Streaming/Channels/101/";
+//    const std::string filename2              = "rtsp://admin:Watad@2022@192.168.1.65:554/Streaming/Channels/101/";
+//    const std::string filename3              = "rtsp://admin:Watad@2022@192.168.1.66:554/Streaming/Channels/101/";
 
-    cv::VideoCapture cap(filename);
+//    cv::VideoCapture cap1(filename1);
+//    cv::VideoCapture cap2(filename2);
+//    cv::VideoCapture cap3(filename3);
 
-    // Check if camera opened successfully
-    if(!cap.isOpened()){
-        std::cout << "Error opening video stream or file" <<  std::endl;
-        return -1;
-    }
 
+//    // Check if camera opened successfully
+//    if(!cap1.isOpened()){
+//        std::cout << "Error opening video stream or file" <<  std::endl;
+//        return -1;
+//    }
+
+//    if(!cap2.isOpened()){
+//        std::cout << "Error opening video stream or file" <<  std::endl;
+//        return -1;
+//    }
+
+//    if(!cap3.isOpened()){
+//        std::cout << "Error opening video stream or file" <<  std::endl;
+//        return -1;
+//    }
+
+    _hkipc1.open();
+    _hkipc2.open();
+    _hkipc3.open();
     while(1){
         //cv::Mat frame;
 
         //frame = cv::imread(filename);
         // Capture frame-by-frame
-         cap >> frame;
 
-        if (frame.empty())
+//        cap1.grab();
+//        cap2.grab();
+//        cap3.grab();
+
+//        cap1.retrieve(frame1);
+//        cap2.retrieve(frame2);
+//        cap3.retrieve(frame3);
+
+        cv::Mat                                 frame1;
+        cv::Mat                                 frame2;
+        cv::Mat                                 frame3;
+        _hkipc1.read(frame1);
+        _hkipc2.read(frame2);
+        _hkipc3.read(frame3);
+
+        if (frame1.empty())
         {
             /// @throw std::invalid_argument if the image is empty.
-            throw std::invalid_argument("cannot predict with an empty OpenCV image");
+            break;
         }
+
+        if (frame2.empty())
+        {
+            /// @throw std::invalid_argument if the image is empty.
+            break;
+        }
+        cv::rotate(frame3, frame3, cv::ROTATE_90_CLOCKWISE);
+
+        cv::Mat tmpFrame;
+        cv::Mat frame1Tmp = GetSquareImage(frame1, 1280 );
+        cv::Mat frame2Tmp = GetSquareImage(frame2, 1280 );
+
+        hconcat(frame1Tmp, frame2Tmp, tmpFrame);
+        hconcat(tmpFrame, frame3, frame);
+//        std::vector<std::pair<int, int>>        dims{{frame.cols/1,frame.rows/1},{frame.cols/3,frame.rows/2}};
+        std::vector<std::pair<int, int>>        dims{{frame.cols/3,frame.rows/2}};
 
         // divide the original image into the right number of tiles and call predict() on each tile
 
@@ -470,18 +628,12 @@ int main(int argc, char *argv[])
                tObj.join();
 
                //TODO POINTER
-               OUTPUT_OBJ result = model_obj->getObjResults();
-
+               OUTPUT_OBJ result = model_obj_org->getObjResults();
+               auto labels_obj_org     = model_obj_org->getLabels();
                for (const auto& object : result.objectList) {
                    cv::rectangle(frame, cv::Rect(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y), static_cast<int32_t>(object.width), static_cast<int32_t>(object.height)), cv::Scalar(255, 255, 0), 3);
-                   cv::putText(frame, labels_obj[object.classId].c_str(), cv::Point(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y) + 10), cv::FONT_HERSHEY_PLAIN, 1, createCvColor(0, 0, 0), 3);
+                   cv::putText(frame, labels_obj_org[object.classId].c_str(), cv::Point(static_cast<int32_t>(object.x), static_cast<int32_t>(object.y) + 10), cv::FONT_HERSHEY_PLAIN, 1, createCvColor(0, 0, 0), 3);
 
-                   if (object.hasCrop == true){
-                       int xmin = static_cast<int32_t>(object.x);
-                       int ymin = static_cast<int32_t>(object.y);
-                       int xmax = xmin + static_cast<int32_t>(object.width);
-                       int ymax = ymin + static_cast<int32_t>(object.height);
-                   }
                }
             }
             else{
@@ -657,7 +809,7 @@ int main(int argc, char *argv[])
                 }
 
                 int annotation_line_thickness           = 2;
-                float threshold							= 0.5f;
+                float threshold							= 0.1f;
                 float annotation_shade_predictions		= 0.25;
                 auto colour                             = cv::Scalar(0x5E, 0x35, 0xFF);
                 bool annotation_suppress_all_labels		= false;
@@ -742,9 +894,10 @@ int main(int argc, char *argv[])
         //Increase frame count
         frameNum++;
 
-        char c=(char)cv::waitKey(10);
+        char c=(char)cv::waitKey(1);
         if(c==27)
             break;
+
     }
 
     //    original_image			= frame;

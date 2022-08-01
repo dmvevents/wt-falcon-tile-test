@@ -1,0 +1,80 @@
+{
+    "sendDefect":{
+        "address1":"http://10.152.183.37:4331/detections-management/detections/",
+        "address2":"http://192.168.0.110:4331/detections-management/detections/",
+        "address":"http://10.41.0.27:4331/detections-management/detections/"
+    },
+    "cs":{
+        "address1":"10.152.183.37",
+        "address2":"192.168.0.110",
+        "address":"10.41.0.27",
+        "port":4331,
+        "feed" : "/liveFeedSocket?encoding=text"
+    },
+    "obj":{
+        "label":"/home/anton/Git/wt-sadara-vision/assets/labels.txt",
+        "model":"/home/anton/Git/wt-sadara-vision/assets/ssdlite_mobiledet_watad_edgetpu.tflite",
+        "model6":"/home/anton/Downloads/ssdlite_mobiledet_watad3_edgetpu.tflite",
+        "con":.6,
+        "tpu":0,
+        "true": 1
+    },
+    "class":{
+        "label":"/home/anton/Git/wt-sadara-vision/assets/labels_good.txt",
+        "model":"/home/anton/Git/wt-sadara-vision/assets/badroll_edgetpu.tflite",
+        "con":.2,
+        "tpu": 0,
+        "true": 0
+    },
+    "crop":{
+        "label":"/home/anton/Git/wt-sadara-vision/assets/labels_good.txt",
+        "model":"/home/anton/Git/wt-sadara-vision/assets/badroll_edgetpu.tflite",
+        "con":.2,
+        "tpu":1,
+        "true": 1
+    },
+    "child":{
+        "label":"/home/anton/Git/wt-sadara-vision/assets/model09012021201006.txt",
+        "model":"/home/anton/Git/wt-sadara-vision/assets/model09012021201006_edgetpu.tflite",
+        "con":.2,
+        "tpu":2,
+        "true": 1
+    },
+    "camera": {
+        "name": "cam1",
+        "number": 1
+    },
+    "video":{
+        "useVideo":1,
+        "videoFile1": "rtsp://192.168.0.121:554/LiveMedia/ch1/Media1",
+        "videoFile3": "/home/anton/Git/wt-sadara-vision/assets/DETECTING.mp4",
+        "videoFile": "/home/anton/Git/wt-sadara-vision/assets/Last.mp4",
+        "videoFile2": "/home/anton/Git/wt-sadara-vision/assets/vlc-record-2022-01-20-12h43m16s-rtsp___192.168.0.121_554_LiveMedia_ch1_Media1-.mp4",
+        "videoFile7": "/home/anton/Git/wt-sadara-vision/assets/2ppl.mp4",
+        "frameRate":1
+    },
+    "tracker":{
+        "maxTracker":1,
+        "maxAge":60,
+        "minHits":1,
+        "detectionThreshold":.7,
+        "affinityThreshold":.3,
+        "heightDiv":1,
+        "widthtDiv":1
+    },
+    "settings":{
+        "resizeFlag":0,
+        "showFlag":0,
+        "resizeNum":1,
+        "savePathBase":"/home/anton/ssd/sadara_project/images",
+        "deltaX":400,
+        "posX":120
+    },
+    "violation":{
+        "distPMax":200,
+        "volMax":200,
+        "volationCountMax":20,
+        "violationUrl":"http://192.168.0.101/api/player",
+        "violationUrl1":"http://localhost:5105/api/player/"
+    }
+}
