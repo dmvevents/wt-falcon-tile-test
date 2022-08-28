@@ -469,44 +469,41 @@ cv::Mat GetSquareImage( const cv::Mat& img, int target_width = 500 )
 int main(int argc, char *argv[])
 {
 
-//    _hkipc1 = new HKIPCamCapture();
-    auto conn_param1 = _hkipc1.getConnectParam();
-    conn_param1.ip = ip1;
-    conn_param1.username = username;
-    conn_param1.password = password;
-    conn_param1.port = 8004;
-    conn_param1.channel = channel;
-    conn_param1.streamtype = streamtype;
-    conn_param1.link_mode = 1;
-    conn_param1.device_id = -1;
-    conn_param1.buffer_size = 20;
-    _hkipc1.setConnectParam(conn_param1);
+//    auto conn_param1 = _hkipc1.getConnectParam();
+//    conn_param1.ip = ip1;
+//    conn_param1.username = username;
+//    conn_param1.password = password;
+//    conn_param1.port = 8004;
+//    conn_param1.channel = channel;
+//    conn_param1.streamtype = streamtype;
+//    conn_param1.link_mode = 1;
+//    conn_param1.device_id = -1;
+//    conn_param1.buffer_size = 20;
+//    _hkipc1.setConnectParam(conn_param1);
 
-//    _hkipc2 = new HKIPCamCapture();
-    auto conn_param2 = _hkipc2.getConnectParam();
-    conn_param2.ip = ip2;
-    conn_param2.username = username;
-    conn_param2.password = password;
-    conn_param2.port = 8005;
-    conn_param2.channel = channel;
-    conn_param2.streamtype = streamtype;
-    conn_param2.link_mode = 1;
-    conn_param2.device_id = -1;
-    conn_param2.buffer_size = 20;
-    _hkipc2.setConnectParam(conn_param2);
+//    auto conn_param2 = _hkipc2.getConnectParam();
+//    conn_param2.ip = ip2;
+//    conn_param2.username = username;
+//    conn_param2.password = password;
+//    conn_param2.port = 8005;
+//    conn_param2.channel = channel;
+//    conn_param2.streamtype = streamtype;
+//    conn_param2.link_mode = 1;
+//    conn_param2.device_id = -1;
+//    conn_param2.buffer_size = 20;
+//    _hkipc2.setConnectParam(conn_param2);
 
-//    _hkipc3 = new HKIPCamCapture();
-    auto conn_param3 = _hkipc3.getConnectParam();
-    conn_param3.ip = ip3;
-    conn_param3.username = username;
-    conn_param3.password = password;
-    conn_param3.port = 8006;
-    conn_param3.channel = channel;
-    conn_param3.streamtype = streamtype;
-    conn_param3.link_mode = 1;
-    conn_param3.device_id = -1;
-    conn_param3.buffer_size = 20;
-    _hkipc3.setConnectParam(conn_param3);
+//    auto conn_param3 = _hkipc3.getConnectParam();
+//    conn_param3.ip = ip3;
+//    conn_param3.username = username;
+//    conn_param3.password = password;
+//    conn_param3.port = 8006;
+//    conn_param3.channel = channel;
+//    conn_param3.streamtype = streamtype;
+//    conn_param3.link_mode = 1;
+//    conn_param3.device_id = -1;
+//    conn_param3.buffer_size = 20;
+//    _hkipc3.setConnectParam(conn_param3);
 
     initTF();
 
@@ -550,9 +547,9 @@ int main(int argc, char *argv[])
 //        return -1;
 //    }
 
-    _hkipc1.open();
-    _hkipc2.open();
-    _hkipc3.open();
+//    _hkipc1.open();
+//    _hkipc2.open();
+//    _hkipc3.open();
     while(1){
         //cv::Mat frame;
 
